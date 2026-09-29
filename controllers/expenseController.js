@@ -1,7 +1,8 @@
-const mongoose = require('mongoose');
-const Expense = require('../models/Expense');
-const asyncHandler = require('../utils/asyncHandler');
-const ApiError = require('../utils/ApiError');
+const mongoose = require("mongoose");
+
+const Expense = require("../models/Expense");
+const asyncHandler = require("../utils/asyncHandler");
+const ApiError = require("../utils/ApiError");
 
 /**
  * @desc    Create a new expense for the authenticated user
@@ -9,7 +10,13 @@ const ApiError = require('../utils/ApiError');
  * @access  Private
  */
 const createExpense = asyncHandler(async (req, res) => {
-  const { title, amount, category, description, date } = req.body;
+  const {
+    title,
+    amount,
+    category,
+    description,
+    date,
+  } = req.body;
 
   const expense = await Expense.create({
     user: req.user._id,
@@ -22,20 +29,25 @@ const createExpense = asyncHandler(async (req, res) => {
 
   res.status(201).json({
     success: true,
-    message: 'Expense created successfully',
+    message: "Expense created successfully",
     data: { expense },
   });
 });
 
 /**
  * Builds a Mongoose filter object from validated query params,
- * always scoped to the authenticated user. Shared by getAllExpenses.
+ * always scoped to the authenticated user.
  */
 const buildExpenseFilter = (userId, query) => {
-  const filter = { user: userId };
+  const filter = {
+    user: userId,
+  };
 
   if (query.search) {
-    filter.title = { $regex: query.search, $options: 'i' };
+    filter.title = {
+      $regex: query.search,
+      $options: "i",
+    };
   }
 
   if (query.category) {
@@ -44,14 +56,30 @@ const buildExpenseFilter = (userId, query) => {
 
   if (query.startDate || query.endDate) {
     filter.date = {};
-    if (query.startDate) filter.date.$gte = new Date(query.startDate);
-    if (query.endDate) filter.date.$lte = new Date(query.endDate);
+
+    if (query.startDate) {
+      filter.date.$gte = new Date(query.startDate);
+    }
+
+    if (query.endDate) {
+      filter.date.$lte = new Date(query.endDate);
+    }
   }
 
   if (query.minAmount || query.maxAmount) {
     filter.amount = {};
-    if (query.minAmount) filter.amount.$gte = parseFloat(query.minAmount);
-    if (query.maxAmount) filter.amount.$lte = parseFloat(query.maxAmount);
+
+    if (query.minAmount) {
+      filter.amount.$gte = parseFloat(
+        query.minAmount
+      );
+    }
+
+    if (query.maxAmount) {
+      filter.amount.$lte = parseFloat(
+        query.maxAmount
+      );
+    }
   }
 
   return filter;
@@ -64,20 +92,31 @@ const buildExpenseFilter = (userId, query) => {
  * @access  Private
  */
 const getAllExpenses = asyncHandler(async (req, res) => {
-  const page = parseInt(req.query.page, 10) || 1;
-  const limit = parseInt(req.query.limit, 10) || 10;
+  const page =
+    parseInt(req.query.page, 10) || 1;
+
+  const limit =
+    parseInt(req.query.limit, 10) || 10;
+
   const skip = (page - 1) * limit;
 
-  const sortBy = req.query.sortBy || 'date';
-  const order = req.query.order === 'asc' ? 1 : -1;
+  const sortBy =
+    req.query.sortBy || "date";
 
-  const filter = buildExpenseFilter(req.user._id, req.query);
+  const order =
+    req.query.order === "asc" ? 1 : -1;
+
+  const filter = buildExpenseFilter(
+    req.user._id,
+    req.query
+  );
 
   const [expenses, total] = await Promise.all([
     Expense.find(filter)
       .sort({ [sortBy]: order })
       .skip(skip)
       .limit(limit),
+
     Expense.countDocuments(filter),
   ]);
 
@@ -85,143 +124,357 @@ const getAllExpenses = asyncHandler(async (req, res) => {
     success: true,
     data: {
       expenses,
+
       pagination: {
         total,
         page,
         limit,
-        totalPages: Math.ceil(total / limit) || 1,
+        totalPages:
+          Math.ceil(total / limit) || 1,
       },
     },
   });
 });
 
 /**
- * @desc    Get a single expense by ID (must belong to the authenticated user)
+ * @desc    Get a single expense by ID
  * @route   GET /api/expenses/:id
  * @access  Private
  */
-const getExpenseById = asyncHandler(async (req, res) => {
-  const expense = await Expense.findOne({ _id: req.params.id, user: req.user._id });
+const getExpenseById = asyncHandler(
+  async (req, res) => {
+    const expense =
+      await Expense.findOne({
+        _id: req.params.id,
+        user: req.user._id,
+      });
 
-  if (!expense) {
-    throw new ApiError(404, 'Expense not found');
+    if (!expense) {
+      throw new ApiError(
+        404,
+        "Expense not found"
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      data: { expense },
+    });
   }
-
-  res.status(200).json({
-    success: true,
-    data: { expense },
-  });
-});
+);
 
 /**
- * @desc    Update an expense (must belong to the authenticated user)
+ * @desc    Update an expense
  * @route   PUT /api/expenses/:id
  * @access  Private
  */
-const updateExpense = asyncHandler(async (req, res) => {
-  const { title, amount, category, description, date } = req.body;
+const updateExpense = asyncHandler(
+  async (req, res) => {
+    const {
+      title,
+      amount,
+      category,
+      description,
+      date,
+    } = req.body;
 
-  const expense = await Expense.findOne({ _id: req.params.id, user: req.user._id });
+    const expense =
+      await Expense.findOne({
+        _id: req.params.id,
+        user: req.user._id,
+      });
 
-  if (!expense) {
-    throw new ApiError(404, 'Expense not found');
+    if (!expense) {
+      throw new ApiError(
+        404,
+        "Expense not found"
+      );
+    }
+
+    if (title !== undefined) {
+      expense.title = title;
+    }
+
+    if (amount !== undefined) {
+      expense.amount = amount;
+    }
+
+    if (category !== undefined) {
+      expense.category = category;
+    }
+
+    if (description !== undefined) {
+      expense.description =
+        description;
+    }
+
+    if (date !== undefined) {
+      expense.date = date;
+    }
+
+    await expense.save();
+
+    res.status(200).json({
+      success: true,
+      message:
+        "Expense updated successfully",
+      data: { expense },
+    });
   }
-
-  if (title !== undefined) expense.title = title;
-  if (amount !== undefined) expense.amount = amount;
-  if (category !== undefined) expense.category = category;
-  if (description !== undefined) expense.description = description;
-  if (date !== undefined) expense.date = date;
-
-  await expense.save();
-
-  res.status(200).json({
-    success: true,
-    message: 'Expense updated successfully',
-    data: { expense },
-  });
-});
+);
 
 /**
- * @desc    Delete an expense (must belong to the authenticated user)
+ * @desc    Delete an expense
  * @route   DELETE /api/expenses/:id
  * @access  Private
  */
-const deleteExpense = asyncHandler(async (req, res) => {
-  const expense = await Expense.findOneAndDelete({ _id: req.params.id, user: req.user._id });
+const deleteExpense = asyncHandler(
+  async (req, res) => {
+    const expense =
+      await Expense.findOneAndDelete({
+        _id: req.params.id,
+        user: req.user._id,
+      });
 
-  if (!expense) {
-    throw new ApiError(404, 'Expense not found');
+    if (!expense) {
+      throw new ApiError(
+        404,
+        "Expense not found"
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      message:
+        "Expense deleted successfully",
+      data: null,
+    });
   }
-
-  res.status(200).json({
-    success: true,
-    message: 'Expense deleted successfully',
-    data: null,
-  });
-});
+);
 
 /**
- * @desc    Get dashboard summary: total expenses, current month total,
- *          category-wise totals, and recent transactions
+ * @desc    Get dashboard summary:
+ *          total expenses,
+ *          current month total,
+ *          category-wise totals,
+ *          spending trend,
+ *          recent transactions
+ *
  * @route   GET /api/expenses/dashboard
  * @access  Private
  */
-const getDashboard = asyncHandler(async (req, res) => {
-  const userId = req.user._id;
+const getDashboard = asyncHandler(
+  async (req, res) => {
+    const userId = req.user._id;
 
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const now = new Date();
 
-  const [totalResult, monthlyResult, categoryTotals, recentTransactions] = await Promise.all([
-    // Total of all expenses for the user
-    Expense.aggregate([
-      { $match: { user: userId } },
-      { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } },
-    ]),
+    const startOfMonth = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      1
+    );
 
-    // Total for the current calendar month
-    Expense.aggregate([
-      {
-        $match: {
-          user: userId,
-          date: { $gte: startOfMonth, $lt: startOfNextMonth },
-        },
-      },
-      { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } },
-    ]),
+    const startOfNextMonth = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      1
+    );
 
-    // Category-wise totals, sorted by highest spend first
-    Expense.aggregate([
-      { $match: { user: userId } },
-      {
-        $group: {
-          _id: '$category',
-          total: { $sum: '$amount' },
-          count: { $sum: 1 },
-        },
-      },
-      { $sort: { total: -1 } },
-      { $project: { _id: 0, category: '$_id', total: 1, count: 1 } },
-    ]),
-
-    // 5 most recent transactions
-    Expense.find({ user: userId }).sort({ date: -1 }).limit(5),
-  ]);
-
-  res.status(200).json({
-    success: true,
-    data: {
-      totalExpenses: totalResult[0]?.total || 0,
-      totalCount: totalResult[0]?.count || 0,
-      monthlyExpenses: monthlyResult[0]?.total || 0,
-      monthlyCount: monthlyResult[0]?.count || 0,
-      categoryWiseTotals: categoryTotals,
+    const [
+      totalResult,
+      monthlyResult,
+      categoryTotals,
+      spendingTrend,
       recentTransactions,
-    },
-  });
-});
+    ] = await Promise.all([
+      /*
+       * Total of all expenses
+       */
+      Expense.aggregate([
+        {
+          $match: {
+            user: userId,
+          },
+        },
+
+        {
+          $group: {
+            _id: null,
+            total: {
+              $sum: "$amount",
+            },
+            count: {
+              $sum: 1,
+            },
+          },
+        },
+      ]),
+
+      /*
+       * Total for current calendar month
+       */
+      Expense.aggregate([
+        {
+          $match: {
+            user: userId,
+
+            date: {
+              $gte: startOfMonth,
+              $lt: startOfNextMonth,
+            },
+          },
+        },
+
+        {
+          $group: {
+            _id: null,
+
+            total: {
+              $sum: "$amount",
+            },
+
+            count: {
+              $sum: 1,
+            },
+          },
+        },
+      ]),
+
+      /*
+       * Category-wise totals
+       */
+      Expense.aggregate([
+        {
+          $match: {
+            user: userId,
+          },
+        },
+
+        {
+          $group: {
+            _id: "$category",
+
+            total: {
+              $sum: "$amount",
+            },
+
+            count: {
+              $sum: 1,
+            },
+          },
+        },
+
+        {
+          $sort: {
+            total: -1,
+          },
+        },
+
+        {
+          $project: {
+            _id: 0,
+            category: "$_id",
+            total: 1,
+            count: 1,
+          },
+        },
+      ]),
+
+      /*
+       * Spending trend
+       *
+       * Daily spending for the
+       * current calendar month.
+       */
+      Expense.aggregate([
+        {
+          $match: {
+            user: userId,
+
+            date: {
+              $gte: startOfMonth,
+              $lt: startOfNextMonth,
+            },
+          },
+        },
+
+        {
+          $group: {
+            _id: {
+              $dateToString: {
+                format: "%Y-%m-%d",
+                date: "$date",
+              },
+            },
+
+            total: {
+              $sum: "$amount",
+            },
+
+            count: {
+              $sum: 1,
+            },
+          },
+        },
+
+        {
+          $sort: {
+            _id: 1,
+          },
+        },
+
+        {
+          $project: {
+            _id: 0,
+
+            date: "$_id",
+
+            total: 1,
+
+            count: 1,
+          },
+        },
+      ]),
+
+      /*
+       * Five most recent transactions
+       */
+      Expense.find({
+        user: userId,
+      })
+        .sort({
+          date: -1,
+        })
+        .limit(5),
+    ]);
+
+    res.status(200).json({
+      success: true,
+
+      data: {
+        totalExpenses:
+          totalResult[0]?.total || 0,
+
+        totalCount:
+          totalResult[0]?.count || 0,
+
+        monthlyExpenses:
+          monthlyResult[0]?.total || 0,
+
+        monthlyCount:
+          monthlyResult[0]?.count || 0,
+
+        categoryWiseTotals:
+          categoryTotals,
+
+        spendingTrend,
+
+        recentTransactions,
+      },
+    });
+  }
+);
 
 module.exports = {
   createExpense,
